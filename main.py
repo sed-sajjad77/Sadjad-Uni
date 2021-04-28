@@ -1,14 +1,16 @@
 import sys
-from os import path
 from PyInquirer import prompt
 from styles import style
 from validator import EmptyValidator, UrlValidator
-from findurl import finder_url
 from selenium import webdriver
 from colorama import init, Fore
 import webbrowser
-
+from helper import back, screencls, finder_url
+from datetime import datetime
+import os
+import subprocess
 def main():
+    screencls()
     question = [
         {
             "type": "list",
@@ -16,9 +18,11 @@ def main():
             "message": "Choose",
             "choices": [
                 "Download Class",
+                "Merge Download File",
                 "Create issues",
                 "Donate",
                 "About",
+                "Help",
                 "Exit"
             ]
         },
@@ -50,9 +54,16 @@ def main():
             if UrlValidator(ans["link"]) is not None:
                 link = f'https://vc2.sadjad.ac.ir/{finder_url(ans["link"])}/output/{finder_url(ans["link"])}.zip?download=zip'
                 print(f"{Fore.GREEN}Download Link : {Fore.BLUE}{link}")
+                with open("DownloadLinks.txt", "a") as fp:
+                    now = datetime.now()
+                    dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
+                    fp.write(f"Link: {link}\nDate and Time: {dt_string}\n{30*'='}\n")
+                if back():
+                    main()
             else:
                 print("invalid url")
-                sys.exit(0)
+                if back():
+                    main()
         elif ans["choice"] == "Open browser and download":
             accountInfo = [
                 {
@@ -85,9 +96,43 @@ def main():
                 url = finder_url(accountinformation["classlink"])
                 downloadurl = f"https://vc2.sadjad.ac.ir/{url}/output/{url}.zip?download=zip"
                 driver.get(downloadurl)
+                with open("DownloadLinks.txt", "a") as fp:
+                    now = datetime.now()
+                    dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
+                    fp.write(f"Link: {url}\nDate and Time: {dt_string}\n{30*'='}\n")
+                if back():
+                    main()
             else:
                 print("invalid url")
-                sys.exit(0)
+                if back():
+                    main()
+    elif ans["main"] == "Merge Download File":
+        print(f"""
+            {Fore.YELLOW}Warning:
+                {Fore.RED}for merging download file first copy file into mergflv folder then run code
+        """)
+        question = [
+            {
+                "type": "input",
+                "name": "merge",
+                "message": "Enter zip filename(Ex: class.zip):",
+                "validate": EmptyValidator
+            },
+            {
+                "type": "input",
+                "name": "filename",
+                "message": "Enter name for output file:",
+                "validate": EmptyValidator
+            }
+        ]
+        ans = prompt(question, style=style)
+        os.chdir("mergflv/")
+        # os.system(f"python3 main.py {ans['merge']} {ans['filename']}")
+        subprocess.run(["python3", "main.py", ans['merge'], ans['filename']], stdout=subprocess.PIPE)
+        os.chdir(os.getcwd())
+        print(f"{Fore.GREEN}Done running the command.")
+        if back():
+            main()
     elif ans["main"] == "About":
         pass
     elif ans["main"] == "Donate":
@@ -109,6 +154,19 @@ def main():
             webbrowser.open("https://github.com/Epic-R-R/Sadjad-Uni/issues/new?assignees=Epic-R-R&labels=bug&template=bug_report.md&title=")
         elif ans["report"] == "Feature request":
             webbrowser.open("https://github.com/Epic-R-R/Sadjad-Uni/issues/new?assignees=&labels=&template=feature_request.md&title=")
+    elif ans["main"] == "Help":
+        print(f"""
+        {Fore.GREEN}Download Class:
+            {Fore.LIGHTGREEN_EX}Get download link: {Fore.BLUE}give you link for download class video and save into DownloadLinks.txt file, 
+                                    after download you must login into your account in vu.sadjad.ac.ir then use link for download
+            {Fore.LIGHTGREEN_EX}Open browser and download: {Fore.BLUE}Automatic open your browser and login into your account then download video
+
+        {Fore.GREEN}Create issues:
+            {Fore.LIGHTGREEN_EX}Bug report: {Fore.BLUE}If you found a bug in code, you can report the bug and we fix it in next version
+            {Fore.LIGHTGREEN_EX}Feature request: {Fore.BLUE}If you want to add a new feature, you can report to us through this option
+        """)
+        if back():
+            main()
     elif ans["main"] == "Exit":
         confirm = [
                 {
@@ -125,5 +183,5 @@ def main():
             main()
 
 if __name__ == "__main__":
-    init(autoreset=True)  # Colorama autoreset terminal color True
+    init(autoreset=True)
     main()
